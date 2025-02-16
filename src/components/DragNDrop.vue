@@ -112,6 +112,7 @@
 
         <!-- Next Section Button -->
         <button
+          v-if="currentSectionIndex < questionSections.length - 1"
           class="w-[70%] bg-secondary py-2 text-white rounded-[.8rem] flex justify-center items-center gap-2"
           @click="handleNextOrSeeResult"
         >
@@ -125,19 +126,62 @@
   </div>
 
   <div
-    class="max-w-md w-full min-h-screen mx-auto text-center overflow-hidden bg-bg1 rounded-[2rem]"
+    class="max-w-md w-full min-h-screen mx-auto text-center overflow-hidden bg-white shadow-lg rounded-[2rem] p-6"
     v-if="showResultPage"
   >
-    <section class="flex justify-between items-center px-[2rem] py-[1rem]">
-      <div class="border p-2 rounded-lg cursor-pointer">
-        <i class="fas fa-home"></i>
+    <!-- Header Section -->
+    <section class="flex justify-between items-center px-4 py-3 border-b">
+      <div
+        class="border p-2 rounded-lg cursor-pointer hover:bg-gray-200 transition"
+      >
+        <i class="fas fa-home text-gray-700 text-lg"></i>
       </div>
 
-      <div class="text-[1.1rem] font-bold text-gray-700">Course Preview</div>
+      <div class="text-lg font-bold text-gray-800">Course Summary</div>
       <div></div>
     </section>
 
-    hello result is
+    <!-- Result Display -->
+    <div class="mt-8 flex flex-col items-center">
+      <h2 class="text-xl font-semibold text-gray-700">Your Score</h2>
+      <p class="text-4xl font-bold text-blue-600 mt-2 animate-pulse">
+        {{ correctAnswerCount }}
+      </p>
+
+      <p class="text-gray-500 mt-2">Correct Answers</p>
+
+      <!-- Performance Message -->
+      <div class="mt-4">
+        <p v-if="correctAnswerCount === 0" class="text-red-500 font-medium">
+          Keep practicing! You’ll improve! 🚀
+        </p>
+        <p
+          v-else-if="correctAnswerCount < 5"
+          class="text-yellow-500 font-medium"
+        >
+          Good effort! Try again for a better score! 💪
+        </p>
+        <p v-else class="text-green-500 font-medium">
+          Excellent job! You're doing great! 🎉
+        </p>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mt-6 flex justify-center gap-4">
+      <button
+        class="px-6 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition"
+        @click="restartQuiz"
+      >
+        Retry Quiz
+      </button>
+      <button
+        class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg shadow hover:bg-gray-400 transition"
+        @click="goHome"
+      >
+        Home
+      </button>
+    </div>
   </div>
 </template>
 
@@ -167,12 +211,16 @@ export default {
       timeLeft: 60, // Countdown in seconds
       timer: null, // Reference to the timer
       countdownDuration: 60, // Countdown duration (same as timeLeft)
-      showResultPage: true,
+      showResultPage:
+        JSON.parse(localStorage.getItem("showResultPage")) || false,
     };
   },
   computed: {
     currentSection() {
       return this.questionSections[this.currentSectionIndex];
+    },
+    correctAnswerCount() {
+      return this.currentSection.questions.filter((q) => q.isCorrect).length;
     },
     isResetDisabled() {
       return (
@@ -200,6 +248,31 @@ export default {
       if (this.isDragDisabled) return;
       event.dataTransfer.setData("text", answer);
     },
+    saveAnswersToStorage() {
+      localStorage.setItem(
+        `answers_${this.currentSectionIndex}`,
+        JSON.stringify(
+          this.currentSection.questions.map((q) => q.matchedAnswer)
+        )
+      );
+    },
+    restartQuiz() {
+      localStorage.clear(); // Clears all stored data
+      this.showResultPage = false;
+      this.correctAnswerCount = 0;
+      this.currentSectionIndex = 0;
+      window.location.reload(); // Reloads the page
+    },
+
+    saveCorrectAnswerCount() {
+      const correctCount = this.currentSection.questions.filter(
+        (q) => q.isCorrect
+      ).length;
+      localStorage.setItem(
+        `correctCount_${this.currentSectionIndex}`,
+        correctCount
+      );
+    },
     onDrop(event, questionIndex) {
       if (this.isDragDisabled) return;
 
@@ -207,6 +280,7 @@ export default {
       const question = this.currentSection.questions[questionIndex];
 
       if (!draggedAnswer || question.matchedAnswer) return;
+
       question.matchedAnswer = draggedAnswer;
       question.isCorrect = draggedAnswer === question.correctAnswer;
       question.isIncorrect = !question.isCorrect;
@@ -216,6 +290,10 @@ export default {
         (a) => a.text === draggedAnswer
       );
       if (answer) answer.disabled = true;
+
+      // Save updated answers and correct answer count
+      this.saveAnswersToStorage();
+      this.saveCorrectAnswerCount();
     },
     startTimer() {
       if (this.timer) clearInterval(this.timer);
@@ -257,6 +335,7 @@ export default {
     },
     resetAnswers() {
       if (this.isResetDisabled) return;
+
       this.currentSection.questions.forEach((q) => {
         q.matchedAnswer = "";
         q.isCorrect = false;
@@ -266,6 +345,13 @@ export default {
       this.currentSection.answers.forEach(
         (answer) => (answer.disabled = false)
       );
+
+      // Clear localStorage for the current section
+      localStorage.removeItem(`answers_${this.currentSectionIndex}`);
+      localStorage.removeItem(`correctCount_${this.currentSectionIndex}`);
+
+      // Reset correct answer count
+      this.correctCount = 0;
     },
     handleNextOrSeeResult() {
       if (this.currentSectionIndex < this.questionSections.length - 1) {
@@ -276,6 +362,10 @@ export default {
     },
     showResult() {
       this.showResultPage = !this.showResultPage;
+      localStorage.setItem(
+        "showResultPage",
+        JSON.stringify(this.showResultPage)
+      );
       //   alert("Show the result here or navigate to the result page!");
       // You can replace this with your own logic to display results
     },
@@ -294,6 +384,34 @@ export default {
   },
   mounted() {
     this.startTimer();
+    this.showResultPage =
+      JSON.parse(localStorage.getItem("showResultPage")) || false;
+
+    // Load stored answers
+    const savedAnswers = localStorage.getItem(
+      `answers_${this.currentSectionIndex}`
+    );
+    if (savedAnswers) {
+      const parsedAnswers = JSON.parse(savedAnswers);
+      this.currentSection.questions.forEach((q, index) => {
+        q.matchedAnswer = parsedAnswers[index] || "";
+        q.isCorrect = q.matchedAnswer === q.correctAnswer;
+        q.isIncorrect = q.matchedAnswer && !q.isCorrect;
+
+        const answer = this.currentSection.answers.find(
+          (a) => a.text === q.matchedAnswer
+        );
+        if (answer) answer.disabled = true;
+      });
+    }
+
+    // Load stored correct answer count
+    const savedCorrectCount = localStorage.getItem(
+      `correctCount_${this.currentSectionIndex}`
+    );
+    if (savedCorrectCount !== null) {
+      this.correctCount = parseInt(savedCorrectCount, 10);
+    }
   },
   beforeUnmount() {
     clearInterval(this.timer);
