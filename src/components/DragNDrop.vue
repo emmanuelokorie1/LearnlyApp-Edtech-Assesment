@@ -4,9 +4,13 @@
     class="max-w-md mx-auto text-center overflow-hidden bg-bg1 rounded-[2rem]"
   >
     <section class="flex justify-between items-center px-[2rem] py-[1rem]">
-      <div class="border p-2 rounded-lg cursor-pointer">
+      <button
+        type="button"
+        @click="backHome"
+        class="border p-2 rounded-lg cursor-pointer"
+      >
         <i class="fas fa-home"></i>
-      </div>
+      </button>
 
       <div class="text-[1.1rem] font-bold text-gray-700">Course Preview</div>
       <div></div>
@@ -131,11 +135,13 @@
   >
     <!-- Header Section -->
     <section class="flex justify-between items-center px-4 py-3 border-b">
-      <div
+      <button
+        type="button"
+        @click="backHome"
         class="border p-2 rounded-lg cursor-pointer hover:bg-gray-200 transition"
       >
         <i class="fas fa-home text-gray-700 text-lg"></i>
-      </div>
+      </button>
 
       <div class="text-lg font-bold text-gray-800">Course Summary</div>
       <div></div>
@@ -176,8 +182,9 @@
         Retry Quiz
       </button>
       <button
+        type="button"
         class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg shadow hover:bg-gray-400 transition"
-        @click="goHome"
+        @click="backHome"
       >
         Home
       </button>
@@ -257,11 +264,23 @@ export default {
       );
     },
     restartQuiz() {
-      localStorage.clear(); // Clears all stored data
+      localStorage.clear();
       this.showResultPage = false;
       this.correctAnswerCount = 0;
       this.currentSectionIndex = 0;
       window.location.reload(); // Reloads the page
+    },
+    backHome() {
+      localStorage.clear();
+
+      this.showResultPage = false;
+      this.correctAnswerCount = 0;
+      this.currentSectionIndex = 0;
+
+      // Slight delay to ensure localStorage is cleared before navigation
+      setTimeout(() => {
+        this.$router.push("/");
+      }, 100);
     },
 
     saveCorrectAnswerCount() {
